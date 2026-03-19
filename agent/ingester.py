@@ -24,7 +24,7 @@ def init_db():
 
 def load_transactions(csv_file: str) -> list[dict]:
     """Load transactions from a CSV file into the database."""
-    
+
     if not os.path.exists(csv_file):
         print(f"Error: File '{csv_file}' not found.")
         return []
@@ -45,6 +45,7 @@ def load_transactions(csv_file: str) -> list[dict]:
     conn = sqlite3.connect(DB_PATH)
 
     inserted = 0
+    skipped = 0
     transactions = []
 
     for _, row in df.iterrows():
@@ -54,17 +55,27 @@ def load_transactions(csv_file: str) -> list[dict]:
             description = str(row["description"]).strip()
             amount = abs(float(row["amount"]))  # always positive
 
-            conn.execute("""
-                INSERT INTO transactions (date, description, amount)
-                VALUES (?, ?, ?)
-            """, (date, description, amount))
+            # Check if transaction already exists before inserting
+            existing = conn.execute("""
+                SELECT COUNT(*) FROM transactions
+                WHERE date = ? AND description = ? AND amount = ?
+            """, (date, description, amount)).fetchone()[0]
 
-            transactions.append({
-                "date": date,
-                "description": description,
-                "amount": amount
-            })
-            inserted += 1
+            if existing == 0:
+                conn.execute("""
+                    INSERT OR IGNORE INTO transactions (date, description, amount)
+                    VALUES (?, ?, ?)
+                """, (date, description, amount))
+
+                transactions.append({
+                    "date": date,
+                    "description": description,
+                    "amount": amount
+                })
+                inserted += 1
+            else:
+                print(f"  Skipping duplicate: {description} on {date}")
+                skipped += 1
 
         except Exception as e:
             print(f"Skipping row due to error: {e}")
@@ -73,7 +84,7 @@ def load_transactions(csv_file: str) -> list[dict]:
     conn.commit()
     conn.close()
 
-    print(f"Successfully loaded {inserted} transactions.")
+    print(f"Successfully loaded {inserted} transactions. ({skipped} duplicates skipped)")
     return transactions
 
 
