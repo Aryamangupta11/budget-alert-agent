@@ -1,0 +1,7 @@
+date,description,amount
+not-a-date,Broken date,500
+2026-03-01,,200
+2026-03-01,Normal tx,-999
+2026-03-01,Unicode test ₹£€,1000
+2026-03-01,Very long description that goes on and on and on and on and on and on,50
+,Missing date,300

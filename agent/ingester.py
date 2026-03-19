@@ -53,6 +53,9 @@ def load_transactions(csv_file: str) -> list[dict]:
             # Parse and normalize date
             date = pd.to_datetime(row["date"]).strftime("%Y-%m-%d")
             description = str(row["description"]).strip()
+            if not description or description.lower() == "nan":
+                print(f"  Skipping row — empty description on {date}")
+            continue
             amount = abs(float(row["amount"]))  # always positive
 
             # Check if transaction already exists before inserting
