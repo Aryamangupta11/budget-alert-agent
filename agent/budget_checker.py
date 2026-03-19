@@ -31,17 +31,22 @@ def load_budgets() -> dict:
 
 def get_monthly_spend(category: str, year: int, month: int) -> float:
     """Get total spending for a category in a given month."""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.execute("""
-        SELECT COALESCE(SUM(amount), 0) 
-        FROM transactions
-        WHERE category = ?
-        AND strftime('%Y', date) = ?
-        AND strftime('%m', date) = ?
-    """, (category, str(year), f"{month:02d}"))
-    total = cursor.fetchone()[0]
-    conn.close()
-    return total
+    if not os.path.exists(DB_PATH):
+        return 0
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.execute("""
+            SELECT COALESCE(SUM(amount), 0) 
+            FROM transactions
+            WHERE category = ?
+            AND strftime('%Y', date) = ?
+            AND strftime('%m', date) = ?
+        """, (category, str(year), f"{month:02d}"))
+        total = cursor.fetchone()[0]
+        conn.close()
+        return total
+    except sqlite3.OperationalError:
+        return 0
 
 
 def check_budgets() -> list[dict]:
