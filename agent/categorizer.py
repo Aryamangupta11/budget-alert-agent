@@ -33,12 +33,16 @@ def categorize_transactions(transactions: list[dict]) -> list[dict]:
     plus a new "category" field. No explanation, no markdown, no code blocks, just raw JSON.
     """
 
-    response = client.chat.completions.create(
-        model="anthropic/claude-3-haiku",
-        messages=[{"role": "user", "content": prompt}]
-    )
-
-    text = response.choices[0].message.content
+    try:
+        response = client.chat.completions.create(
+            model="anthropic/claude-3-haiku",
+            messages=[{"role": "user", "content": prompt}]
+        )
+        text = response.choices[0].message.content
+    except Exception as e:
+        print(f"API Error: {e}")
+        print("Check your OPENROUTER_API_KEY in the .env file.")
+        return []
 
     # Strip markdown code blocks if model added them
     text = text.strip()
@@ -48,7 +52,13 @@ def categorize_transactions(transactions: list[dict]) -> list[dict]:
             text = text[4:]
     text = text.strip()
 
-    result = json.loads(text)
+    try:
+        result = json.loads(text)
+    except json.JSONDecodeError as e:
+        print(f"JSON parsing error: {e}")
+        print(f"Raw response was: {text[:200]}")
+        return []
+
     print(f"Categorized {len(result)} transactions.")
     return result
 
@@ -71,6 +81,10 @@ def save_categories(transactions: list[dict]):
 
 def run_categorization():
     """Load uncategorized transactions, categorize them, save back."""
+    if not os.path.exists(DB_PATH):
+        print("No database found. Run ingest first.")
+        return
+
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.execute("""
         SELECT date, description, amount 
@@ -91,9 +105,13 @@ def run_categorization():
 
     print(f"Sending {len(transactions)} transactions to Claude via OpenRouter...")
     categorized = categorize_transactions(transactions)
+
+    if not categorized:
+        print("Categorization failed — check your API key and try again.")
+        return
+
     save_categories(categorized)
 
     print("\n--- Categorization Result ---")
     for tx in categorized:
         print(f"  {tx['date']} | {tx['description'][:30]:<30} | Rs.{tx['amount']} -> {tx['category']}")
-
