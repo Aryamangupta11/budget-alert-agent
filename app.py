@@ -66,7 +66,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# ── helpers ──────────────────────────────────────────────────────────────────
+# ── helpers ───────────────────────────────────────────────────────────────────
 
 def load_budgets():
     if not os.path.exists(BUDGETS_PATH):
@@ -187,7 +187,6 @@ if page == "Dashboard":
         st.warning("No budgets set yet. Go to Edit Budgets to get started.")
         st.stop()
 
-    # Summary metrics row
     critical = sum(1 for a in alerts if a["level"] == "CRITICAL")
     warning  = sum(1 for a in alerts if a["level"] == "WARNING")
     safe     = sum(1 for a in alerts if a["level"] == "SAFE")
@@ -206,7 +205,6 @@ if page == "Dashboard":
 
     with col_left:
         st.markdown('<div class="section-title">Category Breakdown</div>', unsafe_allow_html=True)
-
         fig = go.Figure()
         categories = [a["category"] for a in alerts]
         spent_vals = [a["spent"] for a in alerts]
@@ -323,10 +321,6 @@ elif page == "Transactions":
 
     st.markdown(f"**{len(filtered)} transactions**")
 
-    def color_level(row):
-        return ["background-color: #2d1515"] * len(row) if row["category"] in ["Shopping", "Entertainment"] \
-               else [""] * len(row)
-
     st.dataframe(
         filtered.rename(columns={
             "date": "Date", "description": "Description",
@@ -365,17 +359,27 @@ elif page == "Upload CSV":
             os.makedirs("data", exist_ok=True)
             df_preview.to_csv(tmp_path, index=False)
 
+            # Check columns before processing
+            required = {"date", "description", "amount"}
+            actual = set(df_preview.columns.str.strip().str.lower())
+            if not required.issubset(actual):
+                missing = required - actual
+                st.error(f"Wrong CSV format! Missing columns: {missing}. Your CSV has: {set(df_preview.columns.tolist())}")
+                st.stop()
+
             with st.spinner("Loading transactions..."):
                 from agent.ingester import load_transactions
                 txs = load_transactions(tmp_path)
 
-            with st.spinner(f"Categorizing {len(txs)} transactions with Claude..."):
-                from agent.categorizer import categorize_transactions, save_categories
-                categorized = categorize_transactions(txs)
-                save_categories(categorized)
-
-            st.success(f"Imported and categorized {len(categorized)} transactions!")
-            st.balloons()
+            if not txs:
+                st.warning("No new transactions found — file may be empty or all rows were duplicates.")
+            else:
+                with st.spinner(f"Categorizing {len(txs)} transactions with Claude..."):
+                    from agent.categorizer import categorize_transactions, save_categories
+                    categorized = categorize_transactions(txs)
+                    save_categories(categorized)
+                st.success(f"Imported and categorized {len(categorized)} transactions!")
+                st.balloons()
 
 
 # ── edit budgets ──────────────────────────────────────────────────────────────
