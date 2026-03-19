@@ -50,26 +50,28 @@ def load_transactions(csv_file: str) -> list[dict]:
 
     for _, row in df.iterrows():
         try:
-            # Parse and normalize date
             date = pd.to_datetime(row["date"]).strftime("%Y-%m-%d")
             description = str(row["description"]).strip()
+            amount = abs(float(row["amount"]))
+
+            
+
             if not description or description.lower() == "nan":
                 print(f"  Skipping row — empty description on {date}")
-            continue
-            amount = abs(float(row["amount"]))  # always positive
+                continue
 
-            # Check if transaction already exists before inserting
             existing = conn.execute("""
                 SELECT COUNT(*) FROM transactions
                 WHERE date = ? AND description = ? AND amount = ?
             """, (date, description, amount)).fetchone()[0]
+
+            
 
             if existing == 0:
                 conn.execute("""
                     INSERT OR IGNORE INTO transactions (date, description, amount)
                     VALUES (?, ?, ?)
                 """, (date, description, amount))
-
                 transactions.append({
                     "date": date,
                     "description": description,
