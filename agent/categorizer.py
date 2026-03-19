@@ -96,3 +96,4 @@ def run_categorization():
     print("\n--- Categorization Result ---")
     for tx in categorized:
         print(f"  {tx['date']} | {tx['description'][:30]:<30} | Rs.{tx['amount']} -> {tx['category']}")
+

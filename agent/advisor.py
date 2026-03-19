@@ -80,3 +80,4 @@ def print_alerts(alerts: list[dict]):
         print(f"\n  Claude says:")
         print(f"  {alert['message']}")
         print(f"\n  {'-'*50}\n")
+
