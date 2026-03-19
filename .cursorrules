@@ -1,0 +1,48 @@
+# Budget Alert Agent — Cursor Rules
+
+## Project overview
+AI-powered personal budget tracking agent built with Python + Claude (via OpenRouter).
+Monitors spending, categorizes transactions, and fires smart alerts.
+
+## Tech stack
+- Python 3.11+
+- OpenRouter API (Claude claude-3-haiku model)
+- SQLite for local storage
+- Streamlit for UI
+- pandas for data processing
+- APScheduler for daily jobs
+- Click for CLI
+
+## Code style
+- Type hints on every function
+- Dataclasses for structured data, not raw dicts
+- All API calls wrapped in try/except with meaningful errors
+- Never hardcode credentials — always os.environ.get()
+- Keep functions small — one job per function
+- Constants in UPPER_CASE at top of file
+
+## File responsibilities
+- ingester.py     → CSV parsing + SQLite writes only
+- categorizer.py  → Claude API calls for labelling only
+- budget_checker.py → Pure logic, no AI calls, fully testable
+- advisor.py      → Claude generates human-readable messages only
+- alert_engine.py → Side effects only (email/SMS/Slack)
+- main.py         → CLI wiring only, no business logic
+- app.py          → Streamlit UI only, imports from agent/
+
+## AI prompt rules
+- Always request JSON-only responses from Claude
+- Strip markdown code fences before json.loads()
+- Batch transactions — never call Claude per transaction
+- Keep prompts under 2000 tokens
+
+## Testing approach
+- Mock all Claude/OpenRouter API calls in tests
+- budget_checker.py must be 100% unit testable (pure functions)
+- Use tests/sample_transactions.csv for integration tests
+
+## Do not
+- Call Claude more than once per batch of transactions
+- Store raw API responses to disk
+- Use print() in UI code — use st.write() or logging
+- Commit .env, venv/, or data/transactions.db to git
